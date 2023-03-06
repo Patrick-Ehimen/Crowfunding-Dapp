@@ -17,11 +17,63 @@ contract CrowdFunding {
     mapping(uint => Campaign) public campaigns;
     uint public numberOfCampaigns = 0;
 
-    function createCampaign() public {}
+    function createCampaign(
+        address _owner,
+        string memory _title,
+        string memory _description,
+        uint _target,
+        uint _deadline,
+        string memory _image
+    ) public returns (uint) {
+        Campaign storage campaign = campaigns[numberOfCampaigns];
 
-    function donateToCampaign() public {}
+        require(
+            campaign.deadline < block.timestamp,
+            "Deadline must be in the future"
+        );
+        campaign.owner = _owner;
+        campaign.title = _title;
+        campaign.description = _description;
+        campaign.target = _target;
+        campaign.deadline = _deadline;
+        campaign.amountCollected = 0;
+        campaign.image = _image;
 
-    function getDonators() public view returns (address[] memory) {}
+        numberOfCampaigns++;
 
-    function getCampaigns() public view returns (Campaign[] memory) {}
+        return numberOfCampaigns - 1;
+    }
+
+    function donateToCampaign(uint _id) public payable {
+        uint amount = msg.value;
+        Campaign storage campaign = campaigns[_id];
+
+        campaign.donators.push(msg.sender);
+        campaign.donations.push(amount);
+
+        (bool sent, ) = payable(campaign.owner).call{value: amount}("");
+
+        if (sent) {
+            campaign.amountCollected = campaign.amountCollected + amount;
+        }
+    }
+
+    function getDonators(
+        uint _id
+    ) public view returns (address[] memory, uint[] memory) {
+        return (campaigns[_id].donators, campaigns[_id].donations);
+    }
+
+    function getCampaigns() public view returns (Campaign[] memory) {
+        Campaign[] memory allCampaigns = new Campaign[](numberOfCampaigns);
+
+        for (uint i = 0; i < numberOfCampaigns; i++) {
+            Campaign storage item = campaigns[i];
+
+            allCampaigns[i] = item;
+            // allCampaigns[i] = campaigns[i];
+        }
+
+        return allCampaigns;
+    }
 }
